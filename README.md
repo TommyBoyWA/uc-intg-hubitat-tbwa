@@ -4,7 +4,7 @@ This integration allows you to control your Hubitat Elevation smart home devices
 
 ## Features
 
-- Control Hubitat devices through Unfolded Circle Remote
+- Control Hubitat devices through Unfolded Circle Remote3
 - Support for multiple device types:
   - Lights (on/off, dimming, color, color temperature)
   - Switches (on/off)
