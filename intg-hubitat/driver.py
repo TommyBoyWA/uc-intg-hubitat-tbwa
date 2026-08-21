@@ -203,7 +203,7 @@ async def load_devices():
 
     _LOG.info("Loading devices from Hubitat")
 
-    try:
+        try:
         devices = await hubitat_client.get_all_devices()
 
         for device in devices:
@@ -214,7 +214,32 @@ async def load_devices():
 
             device_id = str(device["id"])
 
-            # Create appropriate entity
+            # 1. Check if the entity already exists in the UC API registry to prevent UI breakage
+            existing_entity = None
+            for ent in api.available_entities:
+                if ent.id == device_id:
+                    existing_entity = ent
+                    break
+
+            # 2. If it exists, gracefully update its state attributes instead of replacing the object
+            if existing_entity:
+                # Dynamically construct a temporary entity to grab the fresh state attributes
+                if entity_type == "light":
+                    temp_ent = EntityMapper.create_light_entity(device, device_command_handler)
+                elif entity_type == "switch":
+                    temp_ent = EntityMapper.create_switch_entity(device, device_command_handler)
+                elif entity_type == "climate":
+                    temp_ent = EntityMapper.create_climate_entity(device, device_command_handler)
+                else:
+                    continue
+                
+                # Update attributes on the persistent object without breaking remote mappings
+                existing_entity.attributes = temp_ent.attributes
+                entities[device_id] = existing_entity
+                _LOG.info(f"Updated existing {entity_type} entity state: {existing_entity.name} (ID: {device_id})")
+                continue
+
+            # 3. If it does NOT exist, create and register it as a brand-new entity safely
             if entity_type == "light":
                 entity = EntityMapper.create_light_entity(device, device_command_handler)
             elif entity_type == "switch":
@@ -226,9 +251,9 @@ async def load_devices():
 
             entities[device_id] = entity
             api.available_entities.add(entity)
-            _LOG.info(f"Added {entity_type} entity: {entity.name} (ID: {device_id})")
+            _LOG.info(f"Added new {entity_type} entity: {entity.name} (ID: {device_id})")
 
-        _LOG.info(f"Loaded {len(entities)} entities")
+        _LOG.info(f"Loaded/Synced {len(entities)} entities")
 
     except Exception as e:
         _LOG.error(f"Error loading devices: {e}")
