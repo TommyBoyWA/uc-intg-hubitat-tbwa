@@ -1,0 +1,22 @@
+name: Build Remote 3 Package
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create Remote 3 Archive
+        run: |
+          # Compress all repository files into the precise .tar.gz bundle
+          tar -czf uc-intg-hubitat-tbwa.tar.gz --exclude='.github' --exclude='.git' .
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hubitat-integration-package
+          path: uc-intg-hubitat-tbwa.tar.gz
