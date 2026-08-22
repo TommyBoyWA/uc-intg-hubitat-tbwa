@@ -10,13 +10,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Create Remote 3 Archive
+      - name: Build Integration Package
         run: |
-          # Compress all repository files into the precise .tar.gz bundle
-          tar -czf uc-intg-hubitat-tbwa.tar.gz --exclude='.github' --exclude='.git' .
+          # Create a clean target directory
+          mkdir -p build_output
+          
+          # Target only the essential integration files, leaving out GitHub noise
+          tar -czf build_output/uc-intg-hubitat-tbwa.tar.gz \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='build_output' \
+            .
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
           name: hubitat-integration-package
-          path: uc-intg-hubitat-tbwa.tar.gz
+          path: build_output/uc-intg-hubitat-tbwa.tar.gz
