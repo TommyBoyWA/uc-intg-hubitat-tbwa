@@ -7,22 +7,33 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout your custom fork code
         uses: actions/checkout@v4
 
-      - name: Build Integration Package
+      - name: Download Original System Binary
         run: |
-          # Create a clean target directory
           mkdir -p build_output
+          # Pulls the official, heavy compiled core from the master project releases
+          curl -L -o original_release.tar.gz https://github.com
           
-          # Target only the essential integration files, leaving out GitHub noise
-          tar -czf build_output/uc-intg-hubitat-tbwa.tar.gz \
+          # Unpack the binary core safely into a temporary folder
+          mkdir temp_core && tar -xzf original_release.tar.gz -C temp_core/
+
+      - name: Inject Your Custom Modified Code
+        run: |
+          # Copy your custom code edits straight into the binary runner bundle
+          cp -r . temp_core/
+          
+          # Package everything back up cleanly into the exact Remote 3 format
+          cd temp_core
+          tar -czf ../build_output/uc-intg-hubitat-tbwa.tar.gz \
             --exclude='.git' \
             --exclude='.github' \
-            --exclude='build_output' \
+            --exclude='original_release.tar.gz' \
+            --exclude='temp_core' \
             .
 
-      - name: Upload Build Artifact
+      - name: Upload Complete 30MB Package
         uses: actions/upload-artifact@v4
         with:
           name: hubitat-integration-package
