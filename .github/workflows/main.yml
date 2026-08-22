@@ -7,33 +7,35 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout custom code
+      - name: Checkout your custom code
         uses: actions/checkout@v4
 
-      - name: Build Distribution Binary (aarch64)
-        run: |
-          # Use Unfolded Circle's custom development environment to compile your driver
-          docker run --rm \
-            -v "$PWD":/workspace \
-            docker.io/unfoldedcircle/r2-pyinstaller:3.11.6-0.2.0 \
-            bash -c "cd /workspace && python -m pip install -r requirements.txt && pyinstaller --clean --onedir --name intg-hubitat main.py"
-
-      - name: Package Bundle For Remote 3
+      - name: Inject Code into Original Release Bundle
         run: |
           mkdir -p build_output
           
-          # Move your compiled binary files and config manifests into the final target folder
-          cp -r dist/intg-hubitat/ .
+          # 1. Download the original developer's 30MB compiled engine package
+          wget https://github.com
           
-          # Compress everything into the required heavy driver format
-          tar -czf build_output/uc-intg-hubitat-tbwa.tar.gz \
+          # 2. Extract it into a working directory
+          mkdir unpacked_core
+          tar -xzf uc-intg-hubitat-tbwa.tar.gz -C unpacked_core/
+          
+          # 3. Copy your modified files over the old files inside the engine
+          # This swaps your code changes directly into the heavy package
+          cp -rf . unpacked_core/
+          
+          # 4. Repackage everything back into a clean .tar.gz bundle
+          cd unpacked_core
+          tar -czf ../build_output/uc-intg-hubitat-tbwa.tar.gz \
             --exclude='.git' \
             --exclude='.github' \
+            --exclude='uc-intg-hubitat-tbwa.tar.gz' \
+            --exclude='unpacked_core' \
             --exclude='build_output' \
-            --exclude='dist' \
             .
 
-      - name: Upload Finished Heavy Package
+      - name: Upload Complete 30MB Package
         uses: actions/upload-artifact@v4
         with:
           name: hubitat-integration-package
