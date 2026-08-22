@@ -7,35 +7,32 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout your custom code
+      - name: Checkout custom fork code
         uses: actions/checkout@v4
 
-      - name: Inject Code into Original Release Bundle
+      - name: Fetch and Merge Original Master Repository Source
+        run: |
+          mkdir -p master_src
+          curl -L https://github.com | tar -xzf - -C master_src --strip-components=1
+          cp -rf . master_src/
+
+      - name: Compile and Bundle via PyInstaller Container
         run: |
           mkdir -p build_output
+          docker run --rm \
+            -v "$PWD/master_src":/workspace \
+            docker.io/unfoldedcircle/r2-pyinstaller:3.11.6-0.2.0 \
+            bash -c "cd /workspace && python -m pip install -r requirements.txt && pyinstaller --clean --onedir --name intg-hubitat main.py"
           
-          # 1. Download the original developer's 30MB compiled engine package
-          wget https://github.com
-          
-          # 2. Extract it into a working directory
-          mkdir unpacked_core
-          tar -xzf uc-intg-hubitat-tbwa.tar.gz -C unpacked_core/
-          
-          # 3. Copy your modified files over the old files inside the engine
-          # This swaps your code changes directly into the heavy package
-          cp -rf . unpacked_core/
-          
-          # 4. Repackage everything back into a clean .tar.gz bundle
-          cd unpacked_core
+          cd master_src
           tar -czf ../build_output/uc-intg-hubitat-tbwa.tar.gz \
             --exclude='.git' \
             --exclude='.github' \
-            --exclude='uc-intg-hubitat-tbwa.tar.gz' \
-            --exclude='unpacked_core' \
             --exclude='build_output' \
+            --exclude='master_src' \
             .
 
-      - name: Upload Complete 30MB Package
+      - name: Upload Completed 30MB Custom Package
         uses: actions/upload-artifact@v4
         with:
           name: hubitat-integration-package
