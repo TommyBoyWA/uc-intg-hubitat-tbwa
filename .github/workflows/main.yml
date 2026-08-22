@@ -7,22 +7,33 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout your custom code
+      - name: Checkout custom code
         uses: actions/checkout@v4
 
-      - name: Bundle Driver Payload
+      - name: Build Distribution Binary (aarch64)
+        run: |
+          # Use Unfolded Circle's custom development environment to compile your driver
+          docker run --rm \
+            -v "$PWD":/workspace \
+            docker.io/unfoldedcircle/r2-pyinstaller:3.11.6-0.2.0 \
+            bash -c "cd /workspace && python -m pip install -r requirements.txt && pyinstaller --clean --onedir --name intg-hubitat main.py"
+
+      - name: Package Bundle For Remote 3
         run: |
           mkdir -p build_output
           
-          # This compiles your changed source scripts identically 
-          # to how the master integration architecture formats bundles.
+          # Move your compiled binary files and config manifests into the final target folder
+          cp -r dist/intg-hubitat/ .
+          
+          # Compress everything into the required heavy driver format
           tar -czf build_output/uc-intg-hubitat-tbwa.tar.gz \
             --exclude='.git' \
             --exclude='.github' \
             --exclude='build_output' \
+            --exclude='dist' \
             .
 
-      - name: Upload Clean Package
+      - name: Upload Finished Heavy Package
         uses: actions/upload-artifact@v4
         with:
           name: hubitat-integration-package
